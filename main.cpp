@@ -1,15 +1,11 @@
-#include "sqlcipherdriver.h"
+#include "mainwindow.h"
 
-int main()
+#include <QApplication>
+
+int main(int argc, char *argv[])
 {
-    SqlCipherDriver *driver = new SqlCipherDriver();
-    driver->open("mydatabase", "root", "mypassword", "mydatabase");
-
-    QSqlQuery query;
-    query.prepare("INSERT INTO mytable (name, age) VALUES ('John Doe', 25)");
-    query.exec();
-
-    driver->close();
-
-    return 0;
+    QApplication a(argc, argv);
+    MainWindow w;
+    w.show();
+    return a.exec();
 }

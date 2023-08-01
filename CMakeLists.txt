@@ -1,32 +1,98 @@
-cmake_minimum_required(VERSION 3.16)
 
-project(SQLCipherDBPlugin LANGUAGES CXX)
+#####################################################################
+## qsqlcipherDriverPlugin Plugin:
+#####################################################################
 
-set(CMAKE_AUTOUIC ON)
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTORCC ON)
-
-set(CMAKE_INCLUDE_CURRENT_DIR ON)
-
-# Adicione o caminho para a pasta do Qt6 aqui:
-set(Qt6_DIR "/home/administrator/Qt/6.5.1/gcc_64/lib/cmake/Qt6")
-
-find_package(Qt6 COMPONENTS Core Sql REQUIRED)
-
-add_library(SQLCipherDBPlugin SHARED
-    sqlcipherdbplugin.cpp
-    sqlcipherdbdriver.cpp
-    sqlcipherdbplugin.h
-    sqlcipherdbdriver.h
+qt_internal_add_plugin(qsqlcipherDriverPlugin
+    OUTPUT_NAME qsqlcipher
+    PLUGIN_TYPE sqldrivers
+    SOURCES
+        qsql_sqlite.cpp qsql_sqlite_p.h
+        smain.cpp
+    DEFINES
+        QT_NO_CAST_FROM_ASCII
+        QT_NO_CAST_TO_ASCII
+    LIBRARIES
+        Qt::Core
+        Qt::CorePrivate
+        Qt::SqlPrivate
 )
 
-target_link_libraries(SQLCipherDBPlugin PRIVATE Qt6::Core Qt6::Sql)
+## Scopes:
+#####################################################################
 
-# Defina o caminho de instalação para os plugins de sqldrivers
-set(QT_INSTALL_PLUGINS_DIR "/home/administrator/Qt/6.5.1/gcc_64/plugins" CACHE PATH "Plugins directory")
-
-install(TARGETS SQLCipherDBPlugin
-    LIBRARY DESTINATION ${QT_INSTALL_PLUGINS_DIR}/sqldrivers
+qt_internal_extend_target(qsqlcipherDriverPlugin CONDITION QT_FEATURE_system_sqlite
+    LIBRARIES
+        SQLite::SQLite3
 )
 
+if (NOT QT_FEATURE_system_sqlite)
+    # On newer compilers compiling sqlite.c produces warnings
+    qt_disable_warnings(qsqlcipherDriverPlugin)
+endif()
 
+if(QT_FEATURE_system_sqlite)
+    qt_internal_force_macos_intel_arch(qsqlcipherDriverPlugin)
+endif()
+
+qt_internal_extend_target(qsqlcipherDriverPlugin CONDITION NOT QT_FEATURE_system_sqlite
+    SOURCES
+        ../../../3rdparty/sqlite/sqlite3.c
+    DEFINES
+        SQLITE_ENABLE_COLUMN_METADATA
+        SQLITE_ENABLE_FTS3
+        SQLITE_ENABLE_FTS3_PARENTHESIS
+        SQLITE_ENABLE_FTS4
+        SQLITE_ENABLE_FTS5
+        SQLITE_ENABLE_GEOPOLY
+        SQLITE_ENABLE_JSON1
+        SQLITE_ENABLE_MATH_FUNCTIONS
+        SQLITE_ENABLE_RTREE
+        SQLITE_OMIT_COMPLETE
+    INCLUDE_DIRECTORIES
+        ../../../3rdparty/sqlite
+)
+
+qt_internal_extend_target(qsqlcipherDriverPlugin CONDITION CMAKE_BUILD_TYPE STREQUAL Release AND NOT QT_FEATURE_system_sqlite
+    DEFINES
+        NDEBUG
+)
+
+qt_internal_extend_target(qsqlcipherDriverPlugin CONDITION NOT QT_FEATURE_largefile AND NOT QT_FEATURE_system_sqlite
+    DEFINES
+        SQLITE_DISABLE_LFS
+)
+
+qt_internal_extend_target(qsqlcipherDriverPlugin CONDITION QT_FEATURE_posix_fallocate AND NOT QT_FEATURE_system_sqlite
+    DEFINES
+        HAVE_POSIX_FALLOCATE=1
+)
+
+qt_internal_extend_target(qsqlcipherDriverPlugin CONDITION QNX AND NOT QT_FEATURE_system_sqlite
+    DEFINES
+        _QNX_SOURCE
+)
+
+qt_internal_extend_target(qsqlcipherDriverPlugin CONDITION UNIX AND NOT QT_FEATURE_system_sqlite
+    DEFINES
+        HAVE_USLEEP=1
+)
+
+qt_internal_extend_target(qsqlcipherDriverPlugin CONDITION INTEGRITY
+    COMPILE_OPTIONS -include qplatformdefs.h
+)
+
+qt_internal_extend_target(qsqlcipherDriverPlugin CONDITION QT_FEATURE_dlopen AND NOT QT_FEATURE_system_sqlite
+    LIBRARIES
+        ${CMAKE_DL_LIBS}
+)
+
+qt_internal_extend_target(qsqlcipherDriverPlugin CONDITION NOT QT_FEATURE_dlopen AND NOT QT_FEATURE_system_sqlite
+    DEFINES
+        SQLITE_OMIT_LOAD_EXTENSION
+)
+
+qt_internal_extend_target(qsqlcipherDriverPlugin CONDITION NOT QT_FEATURE_thread AND NOT QT_FEATURE_system_sqlite
+    DEFINES
+        SQLITE_THREADSAFE=0
+)
