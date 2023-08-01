@@ -1,19 +1,32 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.16)
 
-project(novoTesteDriver)
+project(SQLCipherDBPlugin LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_PREFIX_PATH /home/administrator/Qt)
-set(Qt6_DIR /home/administrator/Qt/6.5.1/gcc_64/lib/cmake/Qt6)
+set(CMAKE_AUTOUIC ON)
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
 
-set(CMAKE_MODULE_PATH /home/administrator/sqlitebrowser/cmake)
-find_package(Qt6 REQUIRED COMPONENTS Core Sql)
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-find_package(SQLCipher REQUIRED)
+# Adicione o caminho para a pasta do Qt6 aqui:
+set(Qt6_DIR "/home/administrator/Qt/6.5.1/gcc_64/lib/cmake/Qt6")
 
-add_executable(novoTesteDriver sqlcipherdriver.h main.cpp
-    sqlcipherdriver.cpp)
+find_package(Qt6 COMPONENTS Core Sql REQUIRED)
 
-target_link_libraries(novoTesteDriver Qt6::Core Qt6::Sql sqlcipher)
+add_library(SQLCipherDBPlugin SHARED
+    sqlcipherdbplugin.cpp
+    sqlcipherdbdriver.cpp
+    sqlcipherdbplugin.h
+    sqlcipherdbdriver.h
+)
 
-include_directories(database.cfg)
+target_link_libraries(SQLCipherDBPlugin PRIVATE Qt6::Core Qt6::Sql)
+
+# Defina o caminho de instalação para os plugins de sqldrivers
+set(QT_INSTALL_PLUGINS_DIR "/home/administrator/Qt/6.5.1/gcc_64/plugins" CACHE PATH "Plugins directory")
+
+install(TARGETS SQLCipherDBPlugin
+    LIBRARY DESTINATION ${QT_INSTALL_PLUGINS_DIR}/sqldrivers
+)
+
+
