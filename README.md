@@ -1,2 +1,8 @@
-# fct_qt_driver_plugin_db
-Projeto para FCT - Criar um Driver/Plugin de Base de Dados utilizando o SQLCipher no QT
+## FASE DE TESTES
+
+#### UTILIZAR SQLCIPHER NO QT, COM CRIAÇÃO DE DRIVER/PLUGIN PARA BASE DE DADOS.
+#### OBJETIVO SERÁ CRIAR UM DRIVER/PLUGIN PARA BASE DE DADOS "QSQLCIPHER".
+#### FAZER LOAD DESSE DRIVER/PLUGIN E UTILIZAR TODAS FUNÇÕES ASSOCIADAS.
+
+##### Desenvolvido na SDILAB - Research & Software Development (Balanças Marques - Grupo José Pimenta Marques)
+###### Projeto para FCT - IEFP
