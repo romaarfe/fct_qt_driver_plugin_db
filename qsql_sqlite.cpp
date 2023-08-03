@@ -1,8 +1,9 @@
-// Copyright (C) 2016 The Qt Company Ltd.
-// SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
+// Este código parece ser parte de uma implementação baseada no Qt para um driver de base de dados SQLite.
+// Ele inclui várias funções e classes utilitárias para interagir com bases de dados SQLite.
 
 #include "qsql_sqlite_p.h"
 
+// Incluir os cabeçalhos do Qt necessários
 #include <qcoreapplication.h>
 #include <qdatetime.h>
 #include <qdebug.h>
@@ -15,6 +16,8 @@
 #include <QtSql/qsqldriver_p.h>
 #include <qstringlist.h>
 #include <qvariant.h>
+
+// Incluir cabeçalhos adicionais com base na plataforma e funcionalidade
 #if QT_CONFIG(regularexpression)
 #include <qcache.h>
 #include <qregularexpression.h>
@@ -30,6 +33,7 @@
 #include <sqlite3.h>
 #include <functional>
 
+// Declarar ponteiros opacos e metatipos
 Q_DECLARE_OPAQUE_POINTER(sqlite3*)
 Q_DECLARE_METATYPE(sqlite3*)
 
@@ -40,11 +44,11 @@ QT_BEGIN_NAMESPACE
 
 using namespace Qt::StringLiterals;
 
+// Definir uma função utilitária para escapar de um identificador SQL
 static QString _q_escapeIdentifier(const QString &identifier, QSqlDriver::IdentifierType type)
 {
     QString res = identifier;
-    // If it contains [ and ] then we assume it to be escaped properly already as this indicates
-    // the syntax is exactly how it should be
+
     if (identifier.contains(u'[') && identifier.contains(u']'))
         return res;
     if (!identifier.isEmpty() && !identifier.startsWith(u'"') && !identifier.endsWith(u'"')) {
@@ -56,6 +60,7 @@ static QString _q_escapeIdentifier(const QString &identifier, QSqlDriver::Identi
     return res;
 }
 
+// Definir uma função utilitária para obter o tipo de coluna com base no nome do tipo do SQLite
 static int qGetColumnType(const QString &tpName)
 {
     const QString typeName = tpName.toLower();
@@ -74,6 +79,7 @@ static int qGetColumnType(const QString &tpName)
     return QMetaType::QString;
 }
 
+// Definir uma função utilitária para criar um QSqlError a partir de informações de erro do SQLite
 static QSqlError qMakeError(sqlite3 *access, const QString &descr, QSqlError::ErrorType type,
                             int errorCode)
 {
@@ -82,8 +88,10 @@ static QSqlError qMakeError(sqlite3 *access, const QString &descr, QSqlError::Er
                      type, QString::number(errorCode));
 }
 
+// Definir uma classe privada para manipular conjuntos de resultados do SQLite
 class QSQLiteResultPrivate;
 
+// Definir a classe principal para manipular conjuntos de resultados do SQLite
 class QSQLiteResult : public QSqlCachedResult
 {
     Q_DECLARE_PRIVATE(QSQLiteResult)
@@ -108,6 +116,7 @@ protected:
     void virtual_hook(int id, void *data) override;
 };
 
+// Definir uma classe privada para manipular a funcionalidade do driver do SQLite
 class QSQLiteDriverPrivate : public QSqlDriverPrivate
 {
     Q_DECLARE_PUBLIC(QSQLiteDriver)
@@ -119,7 +128,7 @@ public:
     QStringList notificationid;
 };
 
-
+// Definir uma classe privada para manipular detalhes do conjunto de resultados do SQLite
 class QSQLiteResultPrivate : public QSqlCachedResultPrivate
 {
     Q_DECLARE_PUBLIC(QSQLiteResult)
@@ -129,17 +138,18 @@ public:
     using QSqlCachedResultPrivate::QSqlCachedResultPrivate;
     void cleanup();
     bool fetchNext(QSqlCachedResult::ValueCache &values, int idx, bool initialFetch);
-    // initializes the recordInfo and the cache
+    // Inicializa a recordInfo e a cache
     void initColumns(bool emptyResultset);
     void finalize();
 
     sqlite3_stmt *stmt = nullptr;
     QSqlRecord rInf;
     QList<QVariant> firstRow;
-    bool skippedStatus = false; // the status of the fetchNext() that's skipped
-    bool skipRow = false; // skip the next fetchNext()?
+    bool skippedStatus = false; // Status do fetchNext() se foi pulado
+    bool skipRow = false; // Pula o próximo fetchNext()?
 };
 
+// Função para limpar e reiniciar o estado interno do resultado
 void QSQLiteResultPrivate::cleanup()
 {
     Q_Q(QSQLiteResult);
@@ -152,6 +162,7 @@ void QSQLiteResultPrivate::cleanup()
     q->cleanup();
 }
 
+// Função para finalizar um resultado
 void QSQLiteResultPrivate::finalize()
 {
     if (!stmt)
@@ -161,6 +172,7 @@ void QSQLiteResultPrivate::finalize()
     stmt = 0;
 }
 
+// Função para inicializar informações de coluna
 void QSQLiteResultPrivate::initColumns(bool emptyResultset)
 {
     Q_Q(QSQLiteResult);
@@ -177,10 +189,10 @@ void QSQLiteResultPrivate::initColumns(bool emptyResultset)
         const QString tableName = QString(reinterpret_cast<const QChar *>(
                             sqlite3_column_table_name16(stmt, i))
                             ).remove(u'"');
-        // must use typeName for resolving the type to match QSqliteDriver::record
+        // Deve usar typeName para resolver o tipo correspondente ao QSqliteDriver::record
         QString typeName = QString(reinterpret_cast<const QChar *>(
                     sqlite3_column_decltype16(stmt, i)));
-        // sqlite3_column_type is documented to have undefined behavior if the result set is empty
+        // sqlite3_column_type tem comportamento indefinido se o resultado estiver vazio
         int stp = emptyResultset ? -1 : sqlite3_column_type(stmt, i);
 
         int fieldType;
@@ -188,7 +200,7 @@ void QSQLiteResultPrivate::initColumns(bool emptyResultset)
         if (!typeName.isEmpty()) {
             fieldType = qGetColumnType(typeName);
         } else {
-            // Get the proper type for the field based on stp value
+            // Obter o tipo apropriado para o campo com base no valor de stp
             switch (stp) {
             case SQLITE_INTEGER:
                 fieldType = QMetaType::Int;
@@ -215,12 +227,13 @@ void QSQLiteResultPrivate::initColumns(bool emptyResultset)
     }
 }
 
+// Função para buscar a próxima linha no resultado
 bool QSQLiteResultPrivate::fetchNext(QSqlCachedResult::ValueCache &values, int idx, bool initialFetch)
 {
     Q_Q(QSQLiteResult);
 
     if (skipRow) {
-        // already fetched
+        // Já buscada
         Q_ASSERT(!initialFetch);
         skipRow = false;
         for(int i=0;i<firstRow.count();i++)
@@ -243,9 +256,9 @@ bool QSQLiteResultPrivate::fetchNext(QSqlCachedResult::ValueCache &values, int i
     int res = sqlite3_step(stmt);
     switch(res) {
     case SQLITE_ROW:
-        // check to see if should fill out columns
+        // Verificar se as colunas devem ser preenchidas
         if (rInf.isEmpty())
-            // must be first call.
+            // Deve ser a primeira chamada
             initColumns(false);
         if (idx < 0 && !initialFetch)
             return true;
@@ -287,15 +300,15 @@ bool QSQLiteResultPrivate::fetchNext(QSqlCachedResult::ValueCache &values, int i
         return true;
     case SQLITE_DONE:
         if (rInf.isEmpty())
-            // must be first call.
+            // Deve ser a primeira chamada
             initColumns(true);
         q->setAt(QSql::AfterLastRow);
         sqlite3_reset(stmt);
         return false;
     case SQLITE_CONSTRAINT:
     case SQLITE_ERROR:
-        // SQLITE_ERROR is a generic error code and we must call sqlite3_reset()
-        // to get the specific error message.
+        // SQLITE_ERROR é um código de erro genérico e devemos chamar sqlite3_reset()
+        // para obter a mensagem de erro específica.
         res = sqlite3_reset(stmt);
         q->setLastError(qMakeError(drv_d_func()->access, QCoreApplication::translate("QSQLiteResult",
                         "Unable to fetch row"), QSqlError::ConnectionError, res));
@@ -304,7 +317,7 @@ bool QSQLiteResultPrivate::fetchNext(QSqlCachedResult::ValueCache &values, int i
     case SQLITE_MISUSE:
     case SQLITE_BUSY:
     default:
-        // something wrong, don't get col info, but still return false
+        // Algo de errado, não obter informações de coluna, mas ainda retornar falso
         q->setLastError(qMakeError(drv_d_func()->access, QCoreApplication::translate("QSQLiteResult",
                         "Unable to fetch row"), QSqlError::ConnectionError, res));
         sqlite3_reset(stmt);
@@ -314,6 +327,7 @@ bool QSQLiteResultPrivate::fetchNext(QSqlCachedResult::ValueCache &values, int i
     return false;
 }
 
+// Construtor de QSQLiteResult
 QSQLiteResult::QSQLiteResult(const QSQLiteDriver* db)
     : QSqlCachedResult(*new QSQLiteResultPrivate(this, db))
 {
@@ -321,6 +335,7 @@ QSQLiteResult::QSQLiteResult(const QSQLiteDriver* db)
     const_cast<QSQLiteDriverPrivate*>(d->drv_d_func())->results.append(this);
 }
 
+// Destrutor de QSQLiteResult
 QSQLiteResult::~QSQLiteResult()
 {
     Q_D(QSQLiteResult);
@@ -329,11 +344,13 @@ QSQLiteResult::~QSQLiteResult()
     d->cleanup();
 }
 
+// Implementação da função virtual_hook()
 void QSQLiteResult::virtual_hook(int id, void *data)
 {
     QSqlCachedResult::virtual_hook(id, data);
 }
 
+// Implementação da função reset()
 bool QSQLiteResult::reset(const QString &query)
 {
     if (!prepare(query))
@@ -341,6 +358,7 @@ bool QSQLiteResult::reset(const QString &query)
     return exec();
 }
 
+// Implementação da função prepare()
 bool QSQLiteResult::prepare(const QString &query)
 {
     Q_D(QSQLiteResult);
@@ -376,6 +394,7 @@ bool QSQLiteResult::prepare(const QString &query)
     return true;
 }
 
+// Implementação da função execBatch()
 bool QSQLiteResult::execBatch(bool arrayBind)
 {
     Q_UNUSED(arrayBind);
@@ -399,6 +418,7 @@ bool QSQLiteResult::execBatch(bool arrayBind)
     return true;
 }
 
+// Implementação da função exec()
 bool QSQLiteResult::exec()
 {
     Q_D(QSQLiteResult);
@@ -422,10 +442,10 @@ bool QSQLiteResult::exec()
     bool paramCountIsValid = paramCount == values.count();
 
 #if (SQLITE_VERSION_NUMBER >= 3003011)
-    // In the case of the reuse of a named placeholder
-    // We need to check explicitly that paramCount is greater than or equal to 1, as sqlite
-    // can end up in a case where for virtual tables it returns 0 even though it
-    // has parameters
+    // No caso da reutilização de um espaço reservado com nome
+    // Precisamos verificar explicitamente se paramCount é maior ou igual a 1, pois o sqlite
+    // Pode acabar em um caso em que, para tabelas virtuais, ele retorna 0 mesmo que
+    // Tenha parâmetros
     if (paramCount >= 1 && paramCount < values.count()) {
         const auto countIndexes = [](int counter, const QList<int> &indexList) {
                                       return counter + indexList.length();
@@ -437,9 +457,9 @@ bool QSQLiteResult::exec()
                                                    countIndexes);
 
         paramCountIsValid = bindParamCount == values.count();
-        // When using named placeholders, it will reuse the index for duplicated
-        // placeholders. So we need to ensure the QList has only one instance of
-        // each value as SQLite will do the rest for us.
+        // Ao usar espaços reservados com nome, ele reutilizará o índice para espaços reservados duplicados.
+        // Portanto, precisamos garantir que a QList tenha apenas uma instância de
+        // Cada valor, pois o SQLite cuidará do restante para nós.
         QList<QVariant> prunedValues;
         QList<int> handledIndexes;
         for (int i = 0, currentIndex = 0; i < values.size(); ++i) {
@@ -591,6 +611,8 @@ QVariant QSQLiteResult::handle() const
 
 /////////////////////////////////////////////////////////
 
+// Função para tratar expressões regulares em SQLite
+// Verifica se um padrão de expressão regular ocorre em uma string.
 #if QT_CONFIG(regularexpression)
 static void _q_regexp(sqlite3_context* context, int argc, sqlite3_value** argv)
 {
@@ -619,17 +641,23 @@ static void _q_regexp(sqlite3_context* context, int argc, sqlite3_value** argv)
     sqlite3_result_int(context, int(found));
 }
 
+// Função de limpeza para a estrutura de cache de expressões regulares.
 static void _q_regexp_cleanup(void *cache)
 {
     delete static_cast<QCache<QString, QRegularExpression>*>(cache);
 }
 #endif
 
+// Construtor padrão para o driver SQLite do Qt
+// Inicializa a classe QSQLiteDriver com um objeto QSQLiteDriverPrivate e um pai (opcional).
 QSQLiteDriver::QSQLiteDriver(QObject * parent)
     : QSqlDriver(*new QSQLiteDriverPrivate, parent)
 {
 }
 
+// Construtor alternativo para o driver SQLite do Qt
+// Inicializa a classe QSQLiteDriver com um objeto QSQLiteDriverPrivate, uma conexão SQLite3 e um pai (opcional).
+// Abre a conexão com o banco de dados SQLite.
 QSQLiteDriver::QSQLiteDriver(sqlite3 *connection, QObject *parent)
     : QSqlDriver(*new QSQLiteDriverPrivate, parent)
 {
@@ -645,6 +673,7 @@ QSQLiteDriver::~QSQLiteDriver()
     close();
 }
 
+// Verifica se determinados recursos são suportados pelo driver SQLite do Qt.
 bool QSQLiteDriver::hasFeature(DriverFeature f) const
 {
     switch (f) {
@@ -676,9 +705,12 @@ bool QSQLiteDriver::hasFeature(DriverFeature f) const
 }
 
 /*
-   SQLite dbs have no user name, passwords, hosts or ports.
-   just file names.
+   Base de dados SQLite não possuem user name, passwords, hosts ou ports.
+   Apenas nomes dos ficheiros.
 */
+
+// Função para abrir uma conexão com um banco de dados SQLite.
+// Parâmetros fornecidos: nome da base de dados, opções de conexão.
 bool QSQLiteDriver::open(const QString & db, const QString &, const QString &, const QString &, int, const QString &conOpts)
 {
     Q_D(QSQLiteDriver);
@@ -772,6 +804,7 @@ bool QSQLiteDriver::open(const QString & db, const QString &, const QString &, c
     }
 }
 
+// Função para fechar a conexão com a base de dados SQLite.
 void QSQLiteDriver::close()
 {
     Q_D(QSQLiteDriver);
@@ -794,11 +827,13 @@ void QSQLiteDriver::close()
     }
 }
 
+// Função para criar um resultado (query) para o driver SQLite do Qt.
 QSqlResult *QSQLiteDriver::createResult() const
 {
     return new QSQLiteResult(this);
 }
 
+// Função para iniciar uma transação na base de dados SQLite.
 bool QSQLiteDriver::beginTransaction()
 {
     if (!isOpen() || isOpenError())
@@ -814,6 +849,7 @@ bool QSQLiteDriver::beginTransaction()
     return true;
 }
 
+// Função para confirmar uma transação na base de dados SQLite.
 bool QSQLiteDriver::commitTransaction()
 {
     if (!isOpen() || isOpenError())
@@ -829,6 +865,7 @@ bool QSQLiteDriver::commitTransaction()
     return true;
 }
 
+// Função para reverter uma transação na base de dados SQLite.
 bool QSQLiteDriver::rollbackTransaction()
 {
     if (!isOpen() || isOpenError())
@@ -844,6 +881,7 @@ bool QSQLiteDriver::rollbackTransaction()
     return true;
 }
 
+// Função para obter a lista de tabelas na base de dados SQLite.
 QStringList QSQLiteDriver::tables(QSql::TableType type) const
 {
     QStringList res;
@@ -870,7 +908,7 @@ QStringList QSQLiteDriver::tables(QSql::TableType type) const
     }
 
     if (type & QSql::SystemTables) {
-        // there are no internal tables beside this one:
+        // Não há tabelas internas além desta:
         res.append("sqlite_master"_L1);
     }
 
@@ -885,13 +923,13 @@ static QSqlIndex qGetTableInfo(QSqlQuery &q, const QString &tableName, bool only
     if (indexOfSeparator > -1) {
         const qsizetype indexOfCloseBracket = tableName.indexOf(u']');
         if (indexOfCloseBracket != tableName.size() - 1) {
-            // Handles a case like databaseName.tableName
+            // Coordena um caso como databaseName.tableName
             schema = tableName.left(indexOfSeparator + 1);
             table = tableName.mid(indexOfSeparator + 1);
         } else {
             const qsizetype indexOfOpenBracket = tableName.lastIndexOf(u'[', indexOfCloseBracket);
             if (indexOfOpenBracket > 0) {
-                // Handles a case like databaseName.[tableName]
+                // Coordena um caso como databaseName.[tableName]
                 schema = tableName.left(indexOfOpenBracket);
                 table = tableName.mid(indexOfOpenBracket);
             }
@@ -914,8 +952,8 @@ static QSqlIndex qGetTableInfo(QSqlQuery &q, const QString &tableName, bool only
 
         QSqlField fld(q.value(1).toString(), QMetaType(qGetColumnType(typeName)), tableName);
         if (isPk && (typeName == "integer"_L1))
-            // INTEGER PRIMARY KEY fields are auto-generated in sqlite
-            // INT PRIMARY KEY is not the same as INTEGER PRIMARY KEY!
+            // INTEGER PRIMARY KEY são campos gerados automaticamente em sqlite
+            // INT PRIMARY KEY não é o mesmo que INTEGER PRIMARY KEY!
             fld.setAutoValue(true);
         fld.setRequired(q.value(3).toInt() != 0);
         fld.setDefaultValue(defVal);
@@ -924,6 +962,7 @@ static QSqlIndex qGetTableInfo(QSqlQuery &q, const QString &tableName, bool only
     return ind;
 }
 
+// Função para obter o índice primário de uma tabela na base de dados SQLite.
 QSqlIndex QSQLiteDriver::primaryIndex(const QString &tblname) const
 {
     if (!isOpen())
@@ -938,6 +977,7 @@ QSqlIndex QSQLiteDriver::primaryIndex(const QString &tblname) const
     return qGetTableInfo(q, table, true);
 }
 
+// Função para obter os campos (estrutura) de uma tabela na base de dados SQLite.
 QSqlRecord QSQLiteDriver::record(const QString &tbl) const
 {
     if (!isOpen())
@@ -952,6 +992,7 @@ QSqlRecord QSQLiteDriver::record(const QString &tbl) const
     return qGetTableInfo(q, table);
 }
 
+// Função para obter o identificador de conexão com a base de dados SQLite.
 QVariant QSQLiteDriver::handle() const
 {
     Q_D(const QSQLiteDriver);
@@ -988,7 +1029,7 @@ bool QSQLiteDriver::subscribeToNotification(const QString &name)
         return false;
     }
 
-    //sqlite supports only one notification callback, so only the first is registered
+    //Sqlite suporta apenas uma notificação de callback, ou seja, apenas a primeira é registada
     d->notificationid << name;
     if (d->notificationid.count() == 1)
         sqlite3_update_hook(d->access, &handle_sqlite_callback, reinterpret_cast<void *> (this));

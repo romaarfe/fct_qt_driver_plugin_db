@@ -1,6 +1,3 @@
-// Copyright (C) 2016 The Qt Company Ltd.
-// SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
-
 #include <qsqldriverplugin.h>
 #include <qstringlist.h>
 #include "qsql_sqlite_p.h"
@@ -20,11 +17,15 @@ public:
     QSqlDriver* create(const QString &) Q_DECL_OVERRIDE;
 };
 
+// Construtor da classe QSQLCipherDriverPlugin que herda de QSqlDriverPlugin.
+// Define metadados para o plugin.
 QSQLCipherDriverPlugin::QSQLCipherDriverPlugin()
     : QSqlDriverPlugin()
 {
 }
 
+// Cria um novo driver QSQLiteDriver quando o nome é "QSQLCIPHER".
+// Retorna o driver recém-criado.
 QSqlDriver* QSQLCipherDriverPlugin::create(const QString &name)
 {
     if (name == "QSQLCIPHER"_L1) {
