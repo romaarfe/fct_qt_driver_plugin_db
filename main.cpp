@@ -1,39 +1,33 @@
-#include "mainwindow.h"
+#define SQLITE_HAS_CODEC    // Habilita o uso de codificação no SQLite (provavelmente para criptografia)
 
 #include <QCoreApplication>
 #include <QSqlDatabase>
 #include <QSqlQuery>
+#include <sqlcipher/sqlite3.h>  // Inclui a biblioteca SQLite com suporte a codificação (provavelmente SQLCipher)
 #include <QDebug>
-#include <QSqlError>
 
 int main(int argc, char *argv[])
 {
     QCoreApplication a(argc, argv);
 
-    // Carregar o plugin do SQLCipherDB
-    QCoreApplication::addLibraryPath("/home/administrator/Qt/6.5.1/gcc_64/plugins/sqldrivers/qsql_ciphersqlite.so"); // Altere para o caminho correto onde o plugin foi construído
-    QSqlDatabase::addDatabase("QSQLCIPHER");
+    QSqlDatabase db = QSqlDatabase::addDatabase("QSQLCIPHER");  // Adiciona uma base de dados SQLite com suporte a codificação (SQLCipher)
 
-    // Abrir conexão com o banco de dados SQLCipherDB
-    QSqlDatabase db = QSqlDatabase::database();
-    if (db.isOpen()) {
-        qDebug() << "Connected to SQLCipherDB!";
-    } else {
-        qDebug() << "Failed to connect to SQLCipherDB!";
+    db.setDatabaseName("basedados.db"); // Define o nome da base de dados como "basedados.db"
+    db.open();  // Abre a conexão com a base de dados
+
+    QSqlQuery query;
+    query.exec("PRAGMA key = 'senha';");    // Define a chave de criptografia para a base de dados
+
+    if (!query.exec("CREATE TABLE IF NOT EXISTS tabela (id INT PRIMARY KEY, nome TEXT, idade INT)")) {
+        qDebug() << "Erro ao criar tabela!";
     }
 
-    // Executar uma consulta
-    QSqlQuery query("SELECT * FROM tabela"); // Substitua pela consulta desejada
-    if (query.exec()) {
-        while (query.next()) {
-            // Ler e processar os resultados da consulta
-        }
-    } else {
-        qDebug() << "Query failed:" << query.lastError().text();
-    }
+    // Insere registros na tabela
+    query.exec("INSERT INTO tabela (id, nome, idade) VALUES (1, 'Luke', 18)");
+    query.exec("INSERT INTO tabela (id, nome, idade) VALUES (2, 'Leia', 18)");
+    query.exec("INSERT INTO tabela (id, nome, idade) VALUES (3, 'Han', 25)");
+    query.exec("INSERT INTO tabela (id, nome, idade) VALUES (4, 'Yoda', 800)");
 
-    // Fechar a conexão com o banco de dados SQLCipherDB
-    db.close();
-
-    return a.exec();
+    return a.exec();    // Executa o loop de eventos da aplicação
 }
+
