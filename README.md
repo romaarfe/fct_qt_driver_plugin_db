@@ -5,7 +5,7 @@
 ---
 #### ⚙️ ETAPAS / FUNCIONALIDADES:
 
-- [x] Criação de plugin para base de dados
+- [x] Criação de plugin para uso de nova base de dados no QT
 - [x] Promover encriptação através do SQLCipher
 - [x] Permitir que este driver, QSQLCipher, trabalhe tanto com SQLite quanto com SQLCipher
 - [x] Fazer load do driver/plugin com todas suas funções associadas
@@ -13,7 +13,13 @@
 - [x] Testes da funcionalidades, seja através da criação de base de dados encriptada quanto apresentação de seu conteúdo
 
 ---
-#### 🔧 FERRAMENTAS:
+#### ⚠️ NOTAS IMPORTANTES:
+
+- O .setPasword() do próprio QT (QSqlDatabase) ainda trabalha com SQLite, que por sua vez não concebe uso de senhas
+- Para encriptação utilizar um .exec() e "PRAGMA key = 'sua_senha_aqui';"
+
+---
+#### 🔧 FERRAMENTAS / TECNOLOGIAS:
 
 - C++
 - CMake
