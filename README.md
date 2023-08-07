@@ -21,6 +21,7 @@
 ---
 #### 🔧 FERRAMENTAS / TECNOLOGIAS:
 
+- C
 - C++
 - CMake
 - QT Framework
