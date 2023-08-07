@@ -15,8 +15,8 @@
 ---
 #### ⚠️ NOTAS IMPORTANTES:
 
-- O .setPasword() do próprio QT (QSqlDatabase) ainda trabalha com SQLite, que por sua vez não concebe uso de senhas
-- Para encriptação utilizar um .exec() e "PRAGMA key = 'sua_senha_aqui';"
+- O **.setPasword()** do próprio QT (QSqlDatabase) ainda trabalha com SQLite, que por sua vez não concebe uso de senhas
+- Para encriptação utilizar um **.exec()** e **"PRAGMA key = 'sua_senha_aqui';"**
 
 ---
 #### 🔧 FERRAMENTAS / TECNOLOGIAS:
